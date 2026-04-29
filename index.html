@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digi Validator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: #555;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+
+    .upload-zone {
+      background: #fff;
+      border: 2px dashed #b0b8c9;
+      border-radius: 12px;
+      padding: 40px 60px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #4a6cf7;
+      background: #f0f3ff;
+    }
+
+    .upload-zone svg {
+      width: 48px;
+      height: 48px;
+      color: #4a6cf7;
+      margin-bottom: 12px;
+    }
+
+    .upload-zone p { color: #555; font-size: 0.95rem; }
+    .upload-zone span { color: #4a6cf7; font-weight: 600; }
+
+    #fileInput { display: none; }
+
+    .fields-badge {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .badge {
+      background: #e8edff;
+      color: #3050d8;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    #results { width: 100%; max-width: 900px; margin-top: 32px; }
+
+    .summary-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: #fff;
+      border-radius: 10px;
+      padding: 14px 22px;
+      flex: 1;
+      min-width: 130px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .stat .num { font-size: 1.8rem; font-weight: 700; }
+    .stat .label { font-size: 0.78rem; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat.ok .num { color: #27ae60; }
+    .stat.err .num { color: #e74c3c; }
+    .stat.total .num { color: #4a6cf7; }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-bar label { font-size: 0.85rem; font-weight: 600; color: #444; }
+
+    .filter-bar select, .filter-bar input {
+      border: 1px solid #d0d7e2;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      background: #fff;
+      color: #1a1a2e;
+    }
+
+    .export-btn {
+      margin-left: auto;
+      background: #4a6cf7;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .export-btn:hover { background: #3050d8; }
+
+    .table-wrapper {
+      overflow-x: auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.87rem;
+    }
+
+    thead th {
+      background: #f0f3ff;
+      color: #3050d8;
+      padding: 11px 14px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid #d8e0f7;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid #edf0f7; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8f9ff; }
+
+    td { padding: 9px 14px; vertical-align: top; }
+
+    td.missing { color: #e74c3c; font-weight: 600; }
+    td.present { color: #27ae60; }
+
+    .row-num { color: #999; font-size: 0.8rem; }
+
+    .pill {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .pill.missing { background: #fde8e8; color: #c0392b; }
+    .pill.ok { background: #e8f8f0; color: #1e8449; }
+
+    .no-issues {
+      text-align: center;
+      padding: 40px;
+      color: #27ae60;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .error-msg {
+      background: #fde8e8;
+      border-left: 4px solid #e74c3c;
+      padding: 12px 18px;
+      border-radius: 8px;
+      color: #c0392b;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+
+    .warn-msg {
+      background: #fff8e1;
+      border-left: 4px solid #f39c12;
+      padding: 12px 18px;
+      border-radius: 8px;
+      color: #7d5a00;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+
+    .badge.optional { background: #fff3cd; color: #856404; }
+
+    .pill.warn { background: #fff3cd; color: #856404; }
+    .pill.neutral { background: #f0f0f0; color: #888; }
+  </style>
+</head>
+<body>
+
+<h1>Digi Validator</h1>
+<p class="subtitle">Upload a CSV file to check for missing values in required fields.</p>
+
+<div class="upload-zone" id="uploadZone">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+  </svg>
+  <p><span>Click to upload</span> or drag & drop a CSV file</p>
+  <input type="file" id="fileInput" accept=".csv,text/csv" />
+</div>
+
+<div class="fields-badge">
+  <span class="badge">barcode</span>
+  <span class="badge">plu</span>
+  <span class="badge">deli_mode</span>
+  <span class="badge">price</span>
+  <span class="badge optional" title="checked if column exists">ingredients</span>
+  <span class="badge optional" title="checked if column exists">sell_by_type</span>
+  <span class="badge optional" title="checked if column exists">sell_by_time</span>
+</div>
+
+<div id="results"></div>
+
+<script>
+  // Always required — missing column = hard error
+  const REQUIRED_FIELDS = ['barcode', 'plu', 'deli_mode', 'price'];
+
+  // Present in CSV? → checked for missing values. Absent? → noted but not an error.
+  const OPTIONAL_FIELDS = ['ingredients', 'sell_by_type', 'sell_by_time'];
+
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput  = document.getElementById('fileInput');
+  const results    = document.getElementById('results');
+
+  uploadZone.addEventListener('click', () => fileInput.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) processFile(fileInput.files[0]); });
+
+  function parseCSV(text) {
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const headers = splitCSVLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const values = splitCSVLine(line);
+      const obj = {};
+      headers.forEach((h, idx) => { obj[h.trim()] = (values[idx] || '').trim(); });
+      rows.push({ rowNum: i + 1, data: obj });
+    }
+    return { headers, rows };
+  }
+
+  function splitCSVLine(line) {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function isMissing(val) {
+    return val === undefined || val === null || val.toString().trim() === '';
+  }
+
+  // Returns list of issue strings for a row given which optional fields exist
+  function getRowIssues(data, fieldMap, activeOptional) {
+    const issues = [];
+
+    // Required fields
+    for (const f of REQUIRED_FIELDS) {
+      if (isMissing(data[fieldMap[f]])) issues.push(f);
+    }
+
+    // Optional fields present in CSV → check for missing values
+    for (const f of activeOptional) {
+      if (f !== 'sell_by_type' && f !== 'sell_by_time') {
+        if (isMissing(data[fieldMap[f]])) issues.push(f);
+      }
+    }
+
+    // sell_by_type + sell_by_time cross-check
+    const hasSellByType = activeOptional.includes('sell_by_type');
+    const hasSellByTime = activeOptional.includes('sell_by_time');
+
+    if (hasSellByType && hasSellByTime) {
+      const typeVal = data[fieldMap['sell_by_type']];
+      const timeVal = data[fieldMap['sell_by_time']];
+      if (!isMissing(typeVal) && isMissing(timeVal)) issues.push('sell_by_time');
+      // Also flag plain missing values for each
+      if (isMissing(typeVal)) issues.push('sell_by_type');
+      if (isMissing(timeVal) && !issues.includes('sell_by_time')) issues.push('sell_by_time');
+    } else {
+      if (hasSellByType && isMissing(data[fieldMap['sell_by_type']])) issues.push('sell_by_type');
+      if (hasSellByTime && isMissing(data[fieldMap['sell_by_time']])) issues.push('sell_by_time');
+    }
+
+    // Deduplicate
+    return [...new Set(issues)];
+  }
+
+  function processFile(file) {
+    results.innerHTML = '';
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const { headers, rows } = parseCSV(e.target.result);
+        const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
+
+        // Hard check: required columns must exist
+        const missingCols = REQUIRED_FIELDS.filter(f => !normalizedHeaders.includes(f.toLowerCase()));
+        if (missingCols.length > 0) {
+          results.innerHTML = `<div class="error-msg">
+            Required column(s) not found in CSV: <strong>${missingCols.join(', ')}</strong><br>
+            Headers found: ${headers.map(h => `<code>${h}</code>`).join(', ')}
+          </div>`;
+          return;
+        }
+
+        // Detect which optional columns are present
+        const activeOptional = OPTIONAL_FIELDS.filter(f => normalizedHeaders.includes(f.toLowerCase()));
+        const absentOptional = OPTIONAL_FIELDS.filter(f => !normalizedHeaders.includes(f.toLowerCase()));
+
+        // Build fieldMap for all active fields
+        const allActive = [...REQUIRED_FIELDS, ...activeOptional];
+        const fieldMap = {};
+        allActive.forEach(f => {
+          fieldMap[f] = headers.find(h => h.trim().toLowerCase() === f.toLowerCase());
+        });
+
+        // Cross-check: sell_by_type has value but sell_by_time is missing
+        const sellByTypeKey = fieldMap['sell_by_type'];
+        const sellByTimeKey = fieldMap['sell_by_time'];
+        const bothSellBy    = activeOptional.includes('sell_by_type') && activeOptional.includes('sell_by_time');
+
+        // Tag each row with its issues
+        const taggedRows = rows.map(r => ({
+          ...r,
+          issues: getRowIssues(r.data, fieldMap, activeOptional),
+          sellByConflict: bothSellBy && !isMissing(r.data[sellByTypeKey]) && isMissing(r.data[sellByTimeKey]),
+        }));
+
+        const problematic = taggedRows.filter(r => r.issues.length > 0);
+        const totalRows  = rows.length;
+        const issueCount = problematic.length;
+        const okCount    = totalRows - issueCount;
+        const conflictCount = taggedRows.filter(r => r.sellByConflict).length;
+
+        // Absent optional columns notice
+        let noticeHtml = '';
+        if (absentOptional.length > 0) {
+          noticeHtml = `<div class="warn-msg">
+            Optional column(s) not found in CSV — skipped: <strong>${absentOptional.join(', ')}</strong>
+          </div>`;
+        }
+
+        let html = noticeHtml + `
+          <div class="summary-bar">
+            <div class="stat total"><div class="num">${totalRows}</div><div class="label">Total Rows</div></div>
+            <div class="stat ok"><div class="num">${okCount}</div><div class="label">Complete</div></div>
+            <div class="stat err"><div class="num">${issueCount}</div><div class="label">Rows w/ Issues</div></div>
+            ${conflictCount > 0 ? `<div class="stat err"><div class="num">${conflictCount}</div><div class="label">sell_by conflict</div></div>` : ''}
+          </div>`;
+
+        if (issueCount === 0) {
+          const checkedFields = [...REQUIRED_FIELDS, ...activeOptional].join(', ');
+          html += `<div class="table-wrapper"><div class="no-issues">✓ All rows pass validation (checked: ${checkedFields})</div></div>`;
+          results.innerHTML = html;
+          return;
+        }
+
+        // Columns to display: all active checked fields
+        const displayFields = [...REQUIRED_FIELDS, ...activeOptional];
+
+        // Detect a "name" column for display context
+        const nameKey = headers.find(h => h.trim().toLowerCase() === 'name');
+
+        // Build filter options
+        const filterOptions = [
+          '<option value="all">All issues</option>',
+          ...REQUIRED_FIELDS.map(f => `<option value="${f}">${f} (missing)</option>`),
+          ...activeOptional.map(f => `<option value="${f}">${f} (missing)</option>`),
+          ...(bothSellBy ? ['<option value="sell_by_conflict">sell_by_type set but sell_by_time missing</option>'] : []),
+        ].join('');
+
+        html += `
+          <div class="filter-bar">
+            <label>Filter:</label>
+            <select id="fieldFilter">${filterOptions}</select>
+            <button class="export-btn" id="exportBtn">Export CSV</button>
+          </div>
+          <div class="table-wrapper">
+            <table id="issueTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  ${nameKey ? `<th>${nameKey}</th>` : ''}
+                  <th>Issues</th>
+                  ${displayFields.map(f => `<th>${fieldMap[f]}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>`;
+
+        results.innerHTML = html;
+
+        function getFiltered(filter) {
+          if (filter === 'all')            return problematic;
+          if (filter === 'sell_by_conflict') return taggedRows.filter(r => r.sellByConflict);
+          return problematic.filter(r => r.issues.includes(filter));
+        }
+
+        function renderTable(filter) {
+          const filtered = getFiltered(filter);
+          const tbody = document.getElementById('tableBody');
+          tbody.innerHTML = filtered.map(({ rowNum, data, issues, sellByConflict }) => `
+            <tr>
+              <td class="row-num">${rowNum}</td>
+              ${nameKey ? `<td>${data[nameKey] || ''}</td>` : ''}
+              <td>${issues.map(i => `<span class="pill missing">${i}</span>`).join(' ')}
+                ${sellByConflict ? '<span class="pill warn">sell_by conflict</span>' : ''}
+              </td>
+              ${displayFields.map(f => {
+                const val = data[fieldMap[f]];
+                const hasMissue = issues.includes(f);
+                const isConflict = f === 'sell_by_time' && sellByConflict && !isMissing(data[fieldMap['sell_by_type']]) && isMissing(val);
+                if (hasMissue || isConflict) {
+                  return `<td><span class="pill ${isConflict && !hasMissue ? 'warn' : 'missing'}">missing</span></td>`;
+                }
+                return `<td class="present"><span class="pill ok">${val}</span></td>`;
+              }).join('')}
+            </tr>`).join('');
+        }
+
+        renderTable('all');
+        document.getElementById('fieldFilter').addEventListener('change', e => renderTable(e.target.value));
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+          const filter   = document.getElementById('fieldFilter').value;
+          const filtered = getFiltered(filter);
+          const csvHeader = ['row', 'issues', ...headers].join(',');
+          const csvRows = filtered.map(({ rowNum, data, issues }) =>
+            [rowNum, `"${issues.join('; ')}"`, ...headers.map(h => {
+              const v = data[h] ?? '';
+              return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+            })].join(',')
+          );
+          const blob = new Blob([[csvHeader, ...csvRows].join('\n')], { type: 'text/csv' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'validation_issues.csv';
+          a.click();
+        });
+
+      } catch (err) {
+        results.innerHTML = `<div class="error-msg">Failed to parse file: ${err.message}</div>`;
+      }
+    };
+    reader.readAsText(file);
+  }
+</script>
+</body>
+</html>
