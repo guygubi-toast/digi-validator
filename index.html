@@ -235,6 +235,8 @@
   <span class="badge">plu</span>
   <span class="badge">deli_mode</span>
   <span class="badge">price</span>
+  <span class="badge">group</span>
+  <span class="badge">deptno</span>
   <span class="badge optional" title="checked if column exists">ingredients</span>
   <span class="badge optional" title="checked if column exists">sell_by_type</span>
   <span class="badge optional" title="checked if column exists">sell_by_time</span>
@@ -244,7 +246,7 @@
 
 <script>
   // Always required — missing column = hard error
-  const REQUIRED_FIELDS = ['barcode', 'plu', 'deli_mode', 'price'];
+  const REQUIRED_FIELDS = ['barcode', 'plu', 'deli_mode', 'price', 'group', 'deptno'];
 
   // Present in CSV? → checked for missing values. Absent? → noted but not an error.
   const OPTIONAL_FIELDS = ['ingredients', 'sell_by_type', 'sell_by_time'];
