@@ -309,31 +309,7 @@
       if (isMissing(data[fieldMap[f]])) issues.push(f);
     }
 
-    // Optional fields present in CSV → check for missing values
-    for (const f of activeOptional) {
-      if (f !== 'sell_by_type' && f !== 'sell_by_time') {
-        if (isMissing(data[fieldMap[f]])) issues.push(f);
-      }
-    }
-
-    // sell_by_type + sell_by_time cross-check
-    const hasSellByType = activeOptional.includes('sell_by_type');
-    const hasSellByTime = activeOptional.includes('sell_by_time');
-
-    if (hasSellByType && hasSellByTime) {
-      const typeVal = data[fieldMap['sell_by_type']];
-      const timeVal = data[fieldMap['sell_by_time']];
-      if (!isMissing(typeVal) && isMissing(timeVal)) issues.push('sell_by_time');
-      // Also flag plain missing values for each
-      if (isMissing(typeVal)) issues.push('sell_by_type');
-      if (isMissing(timeVal) && !issues.includes('sell_by_time')) issues.push('sell_by_time');
-    } else {
-      if (hasSellByType && isMissing(data[fieldMap['sell_by_type']])) issues.push('sell_by_type');
-      if (hasSellByTime && isMissing(data[fieldMap['sell_by_time']])) issues.push('sell_by_time');
-    }
-
-    // Deduplicate
-    return [...new Set(issues)];
+    return issues;
   }
 
   function processFile(file) {
